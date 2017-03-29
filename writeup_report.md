@@ -37,16 +37,12 @@ Here is a link to the files:
 - [<b>model.h5</b> - The saved model](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/model.h5)
 - [<b>writeup_report.md</b> - A summary of the project](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/writeup_report.md)
 - [<b>videoTrack1.mp4</b> - A video recording of driving autonomously around track1](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/videoTrack1.mp4)
-- <video controls="controls">
-  <source type="video/mp4" src="https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/videoTrack1.mp4?raw=true"></source>
-  <source type="video/webm" src="filename.webm"></source>
-</video>
+![track1](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/videoTrack1-r10.gif?raw=true)
+
+
 - [<b>videoTrack2.mp4</b> - A video recording of driving autonomously around track2](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/videoTrack2.mp4)
-- <video controls="controls">
-  <source type="video/mp4" src="https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/videoTrack2.mp4?raw=true"></source>
-  <source type="video/webm" src="filename.webm"></source>
-</video>
-- 
+![track2](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/videoTrack2-r10.gif?raw=true)
+ 
 
 
 
