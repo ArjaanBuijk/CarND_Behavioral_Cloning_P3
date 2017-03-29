@@ -1,8 +1,9 @@
-#**Behavioral Cloning** 
+# Behavioral Cloning
 
 ---
 
-**Behavioral Cloning Project**
+Behavioral Cloning Project
+---
 
 The goals / steps of this project are the following:
 
@@ -12,25 +13,12 @@ The goals / steps of this project are the following:
 * Test that the model successfully drives around track one without leaving the road
 * Summarize the results with a written report
 
-
-[//]: # (Image References)
-
-[image1]: ./examples/placeholder.png "Model Visualization"
-[image2]: ./examples/placeholder.png "Grayscaling"
-[image3]: ./examples/placeholder_small.png "Recovery Image"
-[image4]: ./examples/placeholder_small.png "Recovery Image"
-[image5]: ./examples/placeholder_small.png "Recovery Image"
-[image6]: ./examples/placeholder_small.png "Normal Image"
-[image7]: ./examples/placeholder_small.png "Flipped Image"
-
-## Rubric Points
-###Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
-
+Files Submitted & Code Quality
 ---
-###Writeup / README
 
-Here is a link to the files:
+#### 1. Submission includes all required files and can be used to run the simulator in autonomous mode
 
+My project includes the following files:
 
 - [<b>model.py</b> - The script used to create and train the model](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/model.py)
 - [<b>drive.py</b> - The script to drive the car](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/drive.py)
@@ -42,24 +30,11 @@ Here is a link to the files:
 
 - [<b>videoTrack2.mp4</b> - A video recording of driving autonomously around track2](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/videoTrack2.mp4)
 ![track2](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/videoTrack2-r10.gif?raw=true)
- 
-
-
-
 
   
 ---
-###Files Submitted & Code Quality
 
-####1. Submission includes all required files and can be used to run the simulator in autonomous mode
-
-My project includes the following files:
-* model.py containing the script to create and train the model
-* drive.py for driving the car in autonomous mode
-* model.h5 containing a trained convolution neural network 
-* writeup_report.md or writeup_report.pdf summarizing the results
-
-####2. Submission includes functional code
+#### 2. Submission includes functional code
 Using the Udacity provided simulator and my drive.py file, the car can be driven autonomously around the track by executing 
 ```sh
 python drive.py model.h5
