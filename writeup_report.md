@@ -83,7 +83,7 @@ The issue with the contrast is addressed by applying grayscale and clahe transfo
 
 ![track2](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/images/track2-crash-image-processing.gif?raw=true)
 
-Up to this point in my model development, I had created training data sets for track 1 and track 2, driving the car in the middle of the road, in both directions. This was a lot of data already, but still the car crashed. My observation was that the "autonomous driver" lost track of the middle line and then did not know what to do. Reviewing the training data, I realized that this type of situation was not yet covered and the model was not trained how to respond.
+Up to this point in my model development, I had created training data sets for track 1 and track 2, driving the car in the center of the road, in both directions. This was a lot of data already, but still the car crashed. My observation was that the "autonomous driver" lost track of the center line and then did not know what to do. Reviewing the training data, I realized that this type of situation was not yet covered and the model was not trained how to respond.
 
 I created 4 additional training data sets. For track 1 & track 2, I drove while 'hugging the line'. I did this for the right line and the left line.
 Here I am showing the training data created for track2, hugging the left line:
