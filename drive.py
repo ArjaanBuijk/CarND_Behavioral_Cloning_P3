@@ -17,7 +17,7 @@ import h5py
 from keras import __version__ as keras_version
 
 #ab
-import clone
+import model as ml
 
 
 sio = socketio.Server()
@@ -33,9 +33,11 @@ class SimplePIController:
         self.set_point = 0.
         self.error = 0.
         self.integral = 0.
+        self.minimum = 1.
 
     def set_desired(self, desired):
         self.set_point = desired
+
 
     def update(self, measurement):
         # proportional error
@@ -48,8 +50,7 @@ class SimplePIController:
 
 
 controller = SimplePIController(0.1, 0.002)
-#ab set_speed = 9
-set_speed = 9
+set_speed = 9.0
 controller.set_desired(set_speed)
 
 
@@ -66,18 +67,19 @@ def telemetry(sid, data):
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
         image_array = np.asarray(image)
-        #steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
+        #ab steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
         
         #ab- Apply same pre-processing as what model was trained on:
         #ab -> grayscale & clahe
-        image_array = clone.rgb_to_grayscale(image_array)
-        image_array = clone.apply_clahe(image_array, clip_limit=clone.myCLIP_LIMIT)
+        image_array = ml.rgb_to_grayscale(image_array)
+        image_array = ml.apply_clahe(image_array, clip_limit=ml.myCLIP_LIMIT)
         
         steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
 
         throttle = controller.update(float(speed))
 
-        #ab print(steering_angle, throttle)
+        #print(steering_angle, throttle)
+        #print(steering_angle1, steering_angle2, throttle)
         send_control(steering_angle, throttle)
 
         # save frame
@@ -112,7 +114,7 @@ if __name__ == '__main__':
         'model',
         type=str,
         help='Path to model h5 file. Model should be on the same path.'
-    )
+    ) 
     parser.add_argument(
         'image_folder',
         type=str,
@@ -131,7 +133,7 @@ if __name__ == '__main__':
         print('You are using Keras version ', keras_version,
               ', but the model was built using ', model_version)
 
-    model = load_model(args.model)
+    model  = load_model(args.model)
 
     if args.image_folder != '':
         print("Creating image folder at {}".format(args.image_folder))

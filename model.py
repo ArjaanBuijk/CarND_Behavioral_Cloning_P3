@@ -1,32 +1,48 @@
-# Initial framework created following steps outlined here: https://goo.gl/siYhbo
-
 import csv
 import cv2
-from copy import deepcopy
-from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
 import sklearn
 from sklearn.model_selection import train_test_split
 from skimage import exposure
 from keras.models import Sequential
 from keras.layers import Cropping2D
-from keras.layers.core import Lambda, Dense, Activation, Flatten, Dropout
+from keras.layers.core import Lambda, Dense, Flatten, Dropout
 from keras.layers.convolutional import Convolution2D
-from keras.layers.pooling import MaxPooling2D
 from keras.models import Model
-from keras import backend as K
-from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
+from keras.callbacks import EarlyStopping
 import os.path
 
-myCLIP_LIMIT = 0.2 # for clahe transform
+#
+# hyper parameters to tune
+#
+myCLIP_LIMIT = 0.5 # for clahe transform
+myEPOCHS = 100
+myTEST_SIZE = 0.1
 STEERING_ANGLE_CORRECTION = 0.2 
+
+
+#
+# directories for training data, which must contain:
+# - driving_log.csv
+# - IMG directory with images.
+#
 FILES_TOP_DIRS = ['./data/data_track_2_left','./data/data_track_2_right',
+                  './data/data_track_2_left_hug_left','./data/data_track_2_left_hug_right',
                   './data/data_track_1_left','./data/data_track_1_right',
+                  './data/data_track_1_left_hug_left','./data/data_track_1_left_hug_right'
                   ]
 
+# hugging drive style --> correct it to center
+HUG_CORRECTION = {}
+HUG_CORRECTION['./data/data_track_2_left_hug_left']  =  0.2         
+HUG_CORRECTION['./data/data_track_2_right_hug_right'] = -0.2 
+HUG_CORRECTION['./data/data_track_1_left_hug_left']  =  0.2         
+HUG_CORRECTION['./data/data_track_1_right_hug_right'] = -0.2  
+
 def read_log_files(top_dirs):
+    """Reads all the log files, and returns the lines after shuffling.
+    """
     lines = []
     for FILES_TOP_DIR in top_dirs:
         log_file_name = FILES_TOP_DIR+'/driving_log.csv'
@@ -39,20 +55,26 @@ def read_log_files(top_dirs):
                     lines.append(line) 
                 else:
                     skipped_header=True    # skip header line
-    return lines
+    return sklearn.utils.shuffle(lines)
 
-def plot_image_and_augmented_image(image, image_augm, filename=None,
-                                   txt='---'):
-   
-    nrows       = 2
-    ncols       = 3            
+def plot_image(image, filename=None, txt='---'):
+    """Plots an image with description
+
+    | txt | image |
+
+    If filename is specified, it will write the plot to file, else to screen.
+
+    The image can be either grayscale or RGB.
+    """    
+    nrows       = 2  # always need 2 rows at minimum for indexing into axes...
+    ncols       = 2            
     axes_width  = 6            
-    axes_height = 1            
+    axes_height = 6            
     width       = ncols * axes_width    
     height      = nrows * axes_height  
     fontsize    = 15 
     fig, axes   = plt.subplots(nrows, ncols, figsize = (width, height) )
-          
+
     # turn off:
     #  - all tick marks and tick labels
     #  - frame of each axes
@@ -61,56 +83,83 @@ def plot_image_and_augmented_image(image, image_augm, filename=None,
             axes[row,ncol].xaxis.set_visible(False)
             axes[row,ncol].yaxis.set_visible(False)
             axes[row,ncol].set_frame_on(False)
-          
-          
-    # Header of columns
-    row = 0
-    axes[row, 0].text(0.0, 0.25, 
-                      'Augmentation Operation',
-                      fontsize=fontsize)
-    axes[row, 1].text(0.4, 0.25, 
-                      'Image',
-                      fontsize=fontsize)
-    axes[row, 2].text(0.4, 0.25, 
-                      'Augmented Image',
-                      fontsize=fontsize)
-              
-    
-    row=1
+
+    row=0
     axes[row, 0].text(0.0, 0.25, 
                       (txt),
-                    fontsize=fontsize)    
-    
+                      fontsize=fontsize)    
+
     if image.ndim == 3 and image.shape[2] == 3:
         axes[row,1].imshow(image)
     else:
         axes[row,1].imshow(image.squeeze(), cmap='gray')
-        
-    if image_augm.ndim == 3 and image_augm.shape[2] == 3:
-        axes[row,2].imshow(image_augm)
-    else:
-        axes[row,2].imshow(image_augm.squeeze(), cmap='gray')
-
 
     if filename == None:      
         plt.show()  
     else:  
-        # When running python directly, not in Jupyter notebook, it is better to
-        # write it to a file & view it in an image viewer
         fig.savefig(filename)
         print ('Written the file: '+ filename)
-          
+
     plt.close(fig)
 
-def save_augmented_images_to_disk(save_to_dir, save_prefix, save_format, X_batch, y_batch):
-    # TODO: this one does not correctly plot the clahed images...
-    for i in range(len(X_batch)):
-        img = array_to_img(X_batch[i], scale=False) # create a PIL image
-        fname = '{prefix}_{index}_{hash}.{format}'.format(prefix=save_prefix,
-                                                          index=i,
-                                                          hash=np.random.randint(1e4),
-                                                          format=save_format)
-        img.save(os.path.join(save_to_dir, fname))    
+def plot_convergence(history_object, filename=None, txt='---'):
+    """Plots the convergence with description
+
+    | txt | plot |
+
+    If filename is specified, it will write the plot to file, else to screen.
+
+    """    
+    nrows       = 2  # always need 2 rows at minimum for indexing into axes...
+    ncols       = 2            
+    axes_width  = 6            
+    axes_height = 6            
+    width       = ncols * axes_width    
+    height      = nrows * axes_height  
+    fontsize    = 15 
+    fig, axes   = plt.subplots(nrows, ncols, figsize = (width, height) )
+
+    # turn off:
+    #  - all tick marks and tick labels
+    #  - frame of each axes
+    for row in range(nrows):
+        for ncol in range(ncols):
+            # except for right upper corner
+            if row==0 and ncol==1:
+                break
+            axes[row,ncol].xaxis.set_visible(False)
+            axes[row,ncol].yaxis.set_visible(False)
+            axes[row,ncol].set_frame_on(False)
+
+    row=0
+    axes[row, 0].text(0.0, 0.25, 
+                      (txt),
+                      fontsize=fontsize)    
+
+    axes[row, 1].plot(history_object.history['loss'])
+    axes[row, 1].plot(history_object.history['val_loss'])
+    axes[row, 1].set_title('model mean squared error loss')
+    axes[row, 1].set_ylabel('mean squared error loss')
+    axes[row, 1].set_xlabel('epoch')
+    axes[row, 1].legend(['training set', 'validation set'], loc='upper right')     
+
+    if filename == None:      
+        plt.show()  
+    else:  
+        fig.savefig(filename)
+        print ('Written the file: '+ filename)
+
+    plt.close(fig)    
+
+def save_augmented_images_to_disk(save_to_dir, save_prefix, save_format, X_batch, y_batch,
+                                  txt='---'):
+    """Save images in a batch to disk, for debug purposes""" 
+    for image in X_batch:
+        fname = '{dir}/{prefix}_{hash}.{format}'.format(dir=save_to_dir,
+                                                         prefix=save_prefix,
+                                                         hash=np.random.randint(1e4),
+                                                         format=save_format)
+        plot_image(image, filename=fname, txt=txt)  
 
 def rgb_to_grayscale(img):
     """Applies the Grayscale transform
@@ -131,7 +180,7 @@ def apply_clahe(img, clip_limit=0.01):
     for description:
     http://scikit-image.org/docs/dev/api/skimage.exposure.html#skimage.exposure.equalize_adapthist
     """
-    x = exposure.equalize_adapthist(img.squeeze(), clip_limit=clip_limit)
+    x = exposure.equalize_adapthist(img.squeeze(), clip_limit=clip_limit) # shape (160, 320)
     return x.reshape(x.shape[0], x.shape[1], 1) # shape (160, 320, 1) required in rest
 
 
@@ -142,8 +191,8 @@ def prep_for_yield(save_to_dir, save_prefix, save_format, images, angles):
     # write it to disk for debug purposes if requested
     if save_prefix:
         save_augmented_images_to_disk(save_to_dir, save_prefix, save_format,
-                                      X_batch, y_batch)
-    # return it, after shuffling, and calling function will yield it
+                                      X_batch, y_batch,'Image yielded from generator')
+    # return shuffled -> the calling function will yield it
     return sklearn.utils.shuffle(X_batch, y_batch)
     
 def generator(lines, batch_size=32,
@@ -153,9 +202,18 @@ def generator(lines, batch_size=32,
               save_to_dir=None,
               save_prefix=None,
               save_format='jpeg'):
-    '''
-    Custom generator for behavior cloning exercise that yields batches for both 
-    training & labels.
+    """
+    Yields batches of augmented images & steering angles:
+	
+	-> for images of 'hugging' style, the steering angle is adjusted with: HUG_CORRECTION
+	-> for left and right images, the steering angle is further adjusted with STEERING_ANGLE_CORRECTION
+	-> each image is also flipped
+	==> so, each line in the log files results in 6 images !
+	
+	-> if requested, each image is grayscaled & a clahe transform is applied
+	
+	-> the augmented data is yielded in batches.
+
     
     inputs:
     - lines: the content of the log file created during data acquisition
@@ -163,15 +221,14 @@ def generator(lines, batch_size=32,
     - flip_horizontal: True -> each image (center, left, right) will be also flipped
     - grayscale: True -> each image is grayscaled as well
     - clahe: True -> a clahe transform is applied to each image
-    - prefix: path_and_prefix for file of final augmented images. Handy for debugging.
+    - save_to_dir: If specified, triggers writing of generated images to this folder.
+	               This is handy for debugging.
+	- save_prefix: prefix for image files.
+	- save_format: format of image files.
 
-    Notes on difference with Keras ImageDataGenerator:
-    - Keras ImagaDataGenerator only processes the images, not the labels. This does
-      not allow to flip the steering angle during horizontal flip of the image.
-    - Keras ImageDataGenerator, when flip_horizontal=True, either returns the image 
-      itself, or its flipped image. Not both, like this generator. Thus, the data is not
-      actually increased.
-    '''
+	returns: 
+	X_batch, y_batch: lists of batch_size images & steering angles
+    """
     assert(len(lines)>0)
     
     num_samples = len(lines) * 6  # center, left, right, and each one flipped
@@ -196,7 +253,12 @@ def generator(lines, batch_size=32,
             else:
                 fnames[2]  = FILES_TOP_DIR + '/' + line[3].strip() # left                
 
-            steering  = float(line[4])
+            if FILES_TOP_DIR in HUG_CORRECTION:
+                hug_correction = HUG_CORRECTION[FILES_TOP_DIR]
+            else:
+                hug_correction = 0.0
+                
+            steering  = float(line[4]) + hug_correction
 
             for f_index in range(3):
                 f = fnames[f_index]
@@ -255,64 +317,13 @@ def generator(lines, batch_size=32,
                     raise Exception(msg)
 
 if __name__ == '__main__':
-    ## ======================================================================================
-    ## Try out the data generator --> This is just for debugging purposes
-    
-    #lines_trial = read_log_files(['data/data_to_test_shadow_contrast/'])
-    
-    #trial_generator  = generator(lines_trial, batch_size=1,
-                                #flip_horizontal=True,
-                                #grayscale=True,
-                                #clahe=True,
-                                #save_to_dir='data/data_to_test_shadow_contrast/preview',
-                                #save_prefix='test',
-                                #save_format='jpeg')
-    
-    ## generate a few augmented images using the trial_generator, which
-    ## will be written to the preview folder.
-    #i = 0
-    #for batch in trial_generator:
-        #i += 1
-        #if i > 4: 
-            #break  # otherwise the generator would loop indefinitely
-    
     # ======================================================================================
-    print ('Train & Validate the network...')
-    
-    # 
-    # read log files of labeled training images
-    lines = read_log_files(FILES_TOP_DIRS)
-    
-    train_samples, validation_samples = train_test_split(lines, test_size=0.2)
-    
-    #
-    # Using custom generator
-    #
-    train_generator      = generator(train_samples, batch_size=32,
-                                     flip_horizontal=True,
-                                     grayscale=True,
-                                     clahe=True,
-                                     save_to_dir=None,
-                                     save_prefix=None,
-                                     save_format='jpeg')
-    
-    validation_generator = generator(validation_samples, batch_size=32,
-                                     flip_horizontal=False, # do NOT generate new images during validation
-                                     grayscale=True,
-                                     clahe=True,
-                                     save_to_dir=None,
-                                     save_prefix=None,
-                                     save_format='jpeg')
-                                                                        
-    
     # define Keras network
-    # it is a regression network, not a classification network !
-    # -> Just predict steering angle, no probability/softmax
-    # -> For loss function, use MSE (Mean Squared Error), not cross-entropy
     
     model = Sequential()
+    
     #
-    # Pre-process the data as part of Keras model
+    # Some pre-processing as part of Keras model
     #
     # crop:
     # 70 rows pixels from the top of the image
@@ -330,12 +341,15 @@ if __name__ == '__main__':
     #with clahe
     model.add(Lambda(lambda x: x / 1.0 - 0.5, name='layer_normalize'))
     
-    # Nvidia CNN
+    # Nvidia CNN 
+    # - https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/
+    # - added a dropout layer to avoid over-fitting
     model.add(Convolution2D(24, 5, 5, subsample=(2,2), activation="relu"))
     model.add(Convolution2D(36, 5, 5, subsample=(2,2), activation="relu"))
     model.add(Convolution2D(48, 5, 5, subsample=(2,2), activation="relu"))
     model.add(Convolution2D(64, 3, 3, activation="relu"))
     model.add(Convolution2D(64, 3, 3, activation="relu"))
+    model.add(Dropout(0.5, noise_shape=None, seed=None)) # ab: attempt to avoid overfitting
     model.add(Flatten())
     model.add(Dense(100))
     model.add(Dense(50))
@@ -343,49 +357,90 @@ if __name__ == '__main__':
     model.add(Dense(1))
     
     model.compile(loss='mse', optimizer='adam')
+
     
-    # Diagnostics of Preprocessing
-    # see: https://keras.io/getting-started/faq/#how-can-i-visualize-the-output-of-an-intermediate-layer
-    # get first & second image (center and flipped)
-    # note: next() returns a list [---,], where --- is the numpy array of images.
+    # ======================================================================================
+    # Trial of the generator & model --> Write images to disk for debug purposes
+    
+    print ('Trial of the data generator and model to preview images...')
+    
+    trial_images_top_dir = 'data/data_failure-track2-a/'
+    lines_trial = read_log_files([trial_images_top_dir])
+    
+    trial_generator  = generator(lines_trial, batch_size=1,
+                                flip_horizontal=False,
+                                grayscale=True,
+                                clahe=True,
+                                save_to_dir=trial_images_top_dir+'/preview',
+                                save_prefix='0_grayscale_and_clahe',
+                                save_format='jpeg')
+    
+    # run the model using the trial_generator.
     i = 0
-    for batch in train_generator:
+    for batch in trial_generator:  # Note that upon yield, images are written to disk
         i += 1
-        
+    
+        # In addition, get images from image processing layers of model
+        # see: https://keras.io/getting-started/faq/#how-can-i-visualize-the-output-of-an-intermediate-layer
+            
         X_batch         = batch[0]    
         
-        ## get cropped immage
+        # get cropped immage
         layer_name = 'layer_crop'
         layer_model = Model(input=model.input,
                             output=model.get_layer(layer_name).output)
         layer_images = layer_model.predict(X_batch)
-        plot_image_and_augmented_image(X_batch[0], 
-                                       layer_images[0],            # plot the first image, cropped
-                                       filename='first_image_cropped',
-                                       txt='Cropped input image')    
+        plot_image(layer_images[0],            # plot the first image, cropped
+                   filename=trial_images_top_dir+'/preview/1_crop.jpeg',
+                   txt='Cropped image')    
         
-        ## get normalized immage
-        layer_name = 'layer_normalize'
-        layer_model = Model(input=model.input,
-                            output=model.get_layer(layer_name).output)
-        layer_images = layer_model.predict(X_batch)
-        plot_image_and_augmented_image(X_batch[0], 
-                                       layer_images[0],            # plot the first image, cropped
-                                       filename='first_image_normalized',
-                                       txt='Normalized input image')        
-    
         if i > 0: 
             break  # otherwise the generator would loop indefinitely
-        
-        
-        
-    # train & test the model
-    model.fit_generator( train_generator, 
+    
+    # ======================================================================================
+    print ('Train & Validate the network...')
+    
+    # 
+    # read log files of labeled training images
+    lines = read_log_files(FILES_TOP_DIRS)
+    
+    train_samples, validation_samples = train_test_split(lines, test_size=myTEST_SIZE)
+    
+    #
+    # Define training and validation generators
+    # -> during validation, we do NOT generate additional images.
+    #
+    train_generator      = generator(train_samples, batch_size=32,
+                                     flip_horizontal=True,
+                                     grayscale=True,
+                                     clahe=True,
+                                     save_to_dir=None,
+                                     save_prefix=None,
+                                     save_format='jpeg')
+    
+    validation_generator = generator(validation_samples, batch_size=32,
+                                     flip_horizontal=False, # do NOT generate new images during validation
+                                     grayscale=True,
+                                     clahe=True,
+                                     save_to_dir=None,
+                                     save_prefix=None,
+                                     save_format='jpeg')
+                                                                                
+    # early stopping: 
+    # -> stop training when loss on validation set doesn't improve for 3 epochs
+    callbacks = [EarlyStopping(monitor='val_loss', min_delta=0, patience=0, verbose=0, mode='auto')]
+    
+    # train & test the model    
+    history_object = model.fit_generator( train_generator, 
                          samples_per_epoch=len(train_samples*6), # center, left, right, flipped*3
                          validation_data=validation_generator,
                          nb_val_samples=len(validation_samples),
-                         nb_epoch=10 )
+                         nb_epoch=myEPOCHS, verbose=1,
+                         callbacks = callbacks)
     
-    
-    
+    # save the model
     model.save('model.h5')
+    
+    # plot the training and validation loss for each epoch
+    plot_convergence(history_object, 
+                     filename='convergence.jpeg', txt='Convergence during training')      
