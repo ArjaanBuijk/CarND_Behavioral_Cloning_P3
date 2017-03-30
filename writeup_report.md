@@ -25,12 +25,14 @@ My project includes the following files:
 - [<b>model.h5</b> - The saved model](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/model.h5)
 - [<b>writeup_report.md</b> - A summary of the project](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/writeup_report.md)
 - [<b>videoTrack1.mp4</b> - A video recording of driving autonomously around track1](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/videoTrack1.mp4)
-![track1](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/videoTrack1-r10.gif?raw=true)
-
+<center>
+![track1](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/images/videoTrack1-r10.gif?raw=true)
+</center>
 
 - [<b>videoTrack2.mp4</b> - A video recording of driving autonomously around track2](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/videoTrack2.mp4)
-![track2](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/videoTrack2-r10.gif?raw=true)
-
+<center>
+![track2](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/images/videoTrack2-r10.gif?raw=true)
+</center>
   
 ---
 
@@ -40,37 +42,90 @@ Using the Udacity provided simulator and my drive.py file, the car can be driven
 python drive.py model.h5
 ```
 
-####3. Submission code is usable and readable
+#### 3. Submission code is usable and readable
 
 The model.py file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works.
 
-###Model Architecture and Training Strategy
 
-####1. An appropriate model architecture has been employed
 
-My model consists of a convolution neural network with 3x3 filter sizes and depths between 32 and 128 (model.py lines 18-24) 
+Model Architecture and Training Strategy
+---
 
-The model includes RELU layers to introduce nonlinearity (code line 20), and the data is normalized in the model using a Keras lambda layer (code line 18). 
+#### 1. An appropriate model architecture has been employed
 
-####2. Attempts to reduce overfitting in the model
+My model (model.py lines 321-359) is almost identical to the [Nvidia convolution neural network for self driving cars](https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/).
 
-The model contains dropout layers in order to reduce overfitting (model.py lines 21). 
+The only changes I made are:
+
+- The input layer is for grayscale images (1 channel instead of 3).
+- After the input layer, the images are cropped.
+- After the cropping layer, the data is normalized.
+- In between the last convolutional layer and flatten layer, I inserted of a dropout layer.
+
+Details on why I made these changes are given below.
+
+
+#### 2. How I got it to work - grayscale, clahe, dropout, lots-of-data
+
+I had a lot of spectacular virtual crashes as I developed this model. I will explain how I got it to work by discussing this stubborn failure:
+
+<center>
+<u>Crash on a difficult section of Track2:</u> 
+(https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/videoTrack2.mp4)
+![track2](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/images/videoTrack2-crash.gif?raw=true)
+</center>
+
+This section is particularly difficult, because:
+
+- it contains strong bright section (sun) next to a very dark section (shadow)
+- the change occurs in the middle of a sharp turn
+
+The issue with the contrast is addressed by applying grayscale and clahe transforms  during image generation (model.py - generator - line 198), followed by a cropping layer in the keras model (model.py - line 336):
+
+<center>
+![track2](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/images/track2-crash-image-processing.gif?raw=true)
+</center>
+
+Up to this point in my model development, I had created training data sets for track 1 and track 2, driving the car in the middle of the road, in both directions. This was a lot of data already, but still the car crashed. My observation was that the "driver" lost track of the right line and then the middle line and did not know what to do. Reviewing the training data, I realized that this type of situation was not yet covered and the model was not trained how to respond.
+
+I created 4 additional training data sets. For track 1 & track 2, I drove while 'hugging the line'. I did this for the right line and the left line.
+Here I am showing the training data created for track2, hugging the left line:
+
+<center>
+![track2](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/images/track2-hug-left-line.gif?raw=true)
+
+<b>Training data, using 'line hugging' drive style</b>
+</center>
+
+I re-trained the model, and tried it out on both tracks. It perfectly handled track 1, but track 2 still crashed in the same location. I scratched my head a few times, and then few times more, trying to figure out how to fix this. I was sure I had sufficient data, convergence was good (see below), the model was a proven CNN, so what could it be ? I then decided to use a similar trick as what was done for the left and right images. 
+
+For the images (center, left and right) created during 'line hugging' drive style, I applied a small correction of 0.2 to the steering angle to nudge the car to move towards the center of the road. (model.py - HUG_CORRECTION).
+
+I again re-trained the model, and now it successfully navigated both tracks, as shown in the videos above.
+
+
+ 
+
+#### 2. Attempts to reduce overfitting in the model
+
+The model contains a dropout layer in order to reduce overfitting (model.py lines 352). 
 
 The model was trained and validated on different data sets to ensure that the model was not overfitting (code line 10-16). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
 
-####3. Model parameter tuning
+#### 3. Model parameter tuning
 
 The model used an adam optimizer, so the learning rate was not tuned manually (model.py line 25).
 
-####4. Appropriate training data
+#### 4. Appropriate training data
 
 Training data was chosen to keep the vehicle driving on the road. I used a combination of center lane driving, recovering from the left and right sides of the road ... 
 
 For details about how I created the training data, see the next section. 
 
-###Model Architecture and Training Strategy
+Model Architecture and Training Strategy
+---
 
-####1. Solution Design Approach
+#### 1. Solution Design Approach
 
 The overall strategy for deriving a model architecture was to ...
 
@@ -86,7 +141,7 @@ The final step was to run the simulator to see how well the car was driving arou
 
 At the end of the process, the vehicle is able to drive autonomously around the track without leaving the road.
 
-####2. Final Model Architecture
+#### 2. Final Model Architecture
 
 The final model architecture (model.py lines 18-24) consisted of a convolution neural network with the following layers and layer sizes ...
 
@@ -94,7 +149,7 @@ Here is a visualization of the architecture (note: visualizing the architecture 
 
 ![alt text][image1]
 
-####3. Creation of the Training Set & Training Process
+#### 3. Creation of the Training Set & Training Process
 
 To capture good driving behavior, I first recorded two laps on track one using center lane driving. Here is an example image of center lane driving:
 
