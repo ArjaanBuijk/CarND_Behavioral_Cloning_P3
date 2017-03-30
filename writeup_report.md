@@ -21,7 +21,7 @@ Files Submitted
 My project includes the following files:
 
 - [<b>model.py</b> - The script used to create and train the model](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/model.py)
-- [<b>drive.py</b> - The script to drive the car](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/drive.py)
+- [<b>drive.py</b> - The script to drive the car (<b>IMPORTANT: model.py must be present in same folder!</b>)](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/drive.py)
 - [<b>model.h5</b> - The saved model](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/model.h5)
 - [<b>writeup_report.md</b> - A summary of the project](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/writeup_report.md)
 - [<b>videoTrack1.mp4</b> - A video recording of driving autonomously around track1](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/videoTrack1.mp4)
@@ -41,6 +41,8 @@ Using the Udacity provided simulator and my drive.py file, the car can be driven
 ```sh
 python drive.py model.h5
 ```
+
+<b>IMPORTANT:</b> model.py must be present in same folder, because drive.py imports a hyperparameter for clahe transform
 
 #### 3. Submission code is usable and readable
 
