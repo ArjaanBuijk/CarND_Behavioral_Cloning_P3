@@ -95,7 +95,7 @@ I re-trained the model, and tried it out on both tracks. It perfectly handled tr
 
 For all the images created during 'line hugging' drive style, I applied a small correction of 0.2 to the steering angle to nudge the car to move towards the center of the road. (model.py - HUG_CORRECTION). Note that for the left & right camera images, this correction comes on top of the already applied steering angle correction.
 
-I again re-trained the model, and now it successfully navigated both tracks, as shown in the videos at the begging of this document.
+I again re-trained the model, and now it successfully navigated both tracks, as shown in the videos at the beginning of this document.
 
 
 #### 3. Dropout layer to reduce overfitting in the model
