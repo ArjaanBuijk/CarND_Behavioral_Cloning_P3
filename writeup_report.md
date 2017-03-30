@@ -55,7 +55,7 @@ Model Architecture and Training Strategy
 
 #### 1. An appropriate model architecture has been employed
 
-My model (model.py lines 321-359) is almost identical to the [Nvidia convolution neural network for self driving cars](https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/).
+My model (model.py lines 321-360) is almost identical to the [Nvidia convolution neural network for self driving cars](https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/).
 
 The only changes I made are:
 
@@ -64,7 +64,19 @@ The only changes I made are:
 - After the cropping layer, the data is normalized.
 - In between the last convolutional layer and flatten layer, I inserted a dropout layer.
 
-Details on why I made these changes are given below.
+A visualization of the Network Architecture is created, showing that there are 14 layers. For each layer, the input and output shapes are given. (model.py - line 369):
+
+![track2](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/images/model.gif?raw=true)
+
+- The input layer has 1 channel, expecting gray scale images of 160x320x1.
+- The 2nd layer crops the images in vertical direction, to eliminate the hood of the car and non-relevant sections above the road. The image size is reduced to 65x320x1.
+- The 3rd layer is a Lambda layer, normalizing the data.
+- Layers 4-8 are Convolution layers, to incrementally detect even more complex features in the images. 
+- Layer 9 is a Dropout layer, which was added to avoid over-fitting. It is shown below that without this layer, the model is prone to over-fitting, but that by adding just this layer results in a very nicely converging solution.
+- Layer 10 flattens the data.
+- Layer 11-14 are Densely connected layers (= activation(dot(input, kernel) + bias)), using relu activation.
+- Layer 14 is also the output layer, giving the predicted steering angle as output.
+
 
 
 #### 2. How I got it to work - grayscale, clahe, dropout, lots-of-data
@@ -79,7 +91,7 @@ This section is particularly challenging, because:
 - it contains a very bright section (sun) next to a very dark section (shadow)
 - the change occurs in the middle of a sharp turn
 
-The issue with the contrast is addressed by applying grayscale and clahe transforms  during image generation (model.py - generator - line 198), followed by a cropping layer in the keras model (model.py - line 336):
+The issue with the contrast is addressed by applying grayscale and clahe transforms  during image generation (model.py - generator - line 199), followed by a cropping layer in the keras model (model.py - line 337):
 
 ![track2](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/images/track2-crash-image-processing.gif?raw=true)
 
@@ -100,22 +112,23 @@ I again re-trained the model, and now it successfully navigated both tracks, as 
 
 #### 3. Dropout layer to reduce overfitting in the model
 
-The model contains a dropout layer in order to reduce overfitting (model.py - line 352). This was necessary as can be seen from the convergence without and with the dropout layer:
+The model contains a dropout layer in order to reduce overfitting (model.py - line 353). This was necessary as can be seen from the convergence without and with the dropout layer:
 
 ![dropout](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/images/dropout-influence.gif?raw=true)
 
 #### 4. Model parameter tuning
 
-The model used an adam optimizer, so the learning rate was not tuned manually (model.py - line 359).
 
-The model uses early stopping, via a keras callback (model.py - line 431).
+The model is a regression, using the mean squared error (mse) as the loss function. The minimization of mse is done with an adam optimizer, so the learning rate was not tuned manually (model.py - line 360).
+
+The model uses early stopping, via a keras callback (model.py - line 440).
 The ideal number of epochs was 7.
 
-The image pre-processing with CLAHE uses a clip limit of 0.5 (model.py - line 19). The model is not sensitive to the value of this parameter.
+The image pre-processing with CLAHE uses a clip limit of 0.5 (model.py - line 20). The model is not sensitive to the value of this parameter.
 
-The steering angle correction for left & right images is 0.2 (model.py - line 22)
+The steering angle correction for left & right images is 0.2 (model.py - line 23)
 
-The additional steering angle correction for line-hugging data is 0.2 (model.py - line 37-41)
+The additional steering angle correction for line-hugging data is 0.2 (model.py - line 38-42)
 
 #### 5. Modification to drive.py
 
@@ -140,7 +153,7 @@ For reasons described above, I created 8 separate training data sets:
 |    2  |   left    |  hug-right |   6479  |
 |       |           |<b>TOTAL</b>|<b>47055</b>|
 
-After reading the lines from the log files, I shuffled them into random order. (model.py - line 58)
+After reading the lines from the log files, I shuffled them into random order. (model.py - line 59)
 
 Each "line" contains 3 images (center, left, right cameras).
 
@@ -148,7 +161,7 @@ To create additional images, I also flipped each image horizontal.
 
 So, in total, there were <b>282,330</b> images.
 
-I split off 10% for validation, the rest was used for training. (model.py - line 407).
+I split off 10% for validation, the rest was used for training. (model.py - line 416).
 
 A generator was used to efficiently process the images. It yields 32 images per batch.
 
