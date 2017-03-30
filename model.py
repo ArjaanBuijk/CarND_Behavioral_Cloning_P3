@@ -361,8 +361,8 @@ if __name__ == '__main__':
 
     # plot a graph of the model
     #
-    # note: this required pydot_ng, or pydot
-    #       had to update the carnd-term1 environment with:
+    # note: this required pydot_ng (or pydot), and Graphviz software on system path.
+    #       --> had to update the carnd-term1 environment with:
     #       % python -m pip install pydot_ng 
     #
     print ("Writing graph of CNN to model.gif")
