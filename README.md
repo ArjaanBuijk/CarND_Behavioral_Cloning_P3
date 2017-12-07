@@ -2,73 +2,177 @@
 
 [![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
-Overview
 ---
-This repository contains starting files for the Behavioral Cloning Project.
 
-In this project, you will use what you've learned about deep neural networks and convolutional neural networks to clone driving behavior. You will train, validate and test a model using Keras. The model will output a steering angle to an autonomous vehicle.
-
-We have provided a simulator where you can steer a car around a track for data collection. You'll use image data and steering angles to train a neural network and then use this model to drive the car autonomously around the track.
-
-We also want you to create a detailed writeup of the project. Check out the [writeup template](https://github.com/udacity/CarND-Behavioral-Cloning-P3/blob/master/writeup_template.md) for this project and use it as a starting point for creating your own writeup. The writeup can be either a markdown file or a pdf document.
-
-To meet specifications, the project will require submitting five files: 
-* model.py (script used to create and train the model)
-* drive.py (script to drive the car - feel free to modify this file)
-* model.h5 (a trained Keras model)
-* a report writeup file (either markdown or pdf)
-* video.mp4 (a video recording of your vehicle driving autonomously around the track for at least one full lap)
-
-This README file describes how to output the video in the "Details About Files In This Directory" section.
-
-Creating a Great Writeup
----
-A great writeup should include the [rubric points](https://review.udacity.com/#!/rubrics/432/view) as well as your description of how you addressed each point.  You should include a detailed description of the code used (with line-number references and code snippets where necessary), and links to other supporting documents or external references.  You should include images in your writeup to demonstrate how your code works with examples.  
-
-All that said, please be concise!  We're not looking for you to write a book here, just a brief description of how you passed each rubric point, and references to the relevant code :). 
-
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup.
-
-The Project
----
 The goals / steps of this project are the following:
-* Use the simulator to collect data of good driving behavior 
-* Design, train and validate a model that predicts a steering angle from image data
-* Use the model to drive the vehicle autonomously around the first track in the simulator. The vehicle should remain on the road for an entire loop around the track.
+
+* Use the simulator to collect data of good driving behavior
+* Build, a convolution neural network in Keras that predicts steering angles from images
+* Train and validate the model with a training and validation set
+* Test that the model successfully drives around track one without leaving the road
 * Summarize the results with a written report
+
+Files Submitted
+---
+
+#### 1. Submission includes all required files and can be used to run the simulator in autonomous mode
+
+My project includes the following files:
+
+- [<b>model.py</b> - The script used to create and train the model](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/model.py)
+- [<b>drive.py</b> - The script to drive the car (<b>IMPORTANT: model.py must be present in same folder!</b>)](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/drive.py)
+- [<b>model.h5</b> - The saved model](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/model.h5)
+- [<b>writeup_report.md</b> - A summary of the project](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/writeup_report.md)
+- [<b>videoTrack1.mp4</b> - A video recording of driving autonomously around track1](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/videoTrack1.mp4)
+
+    ![track1](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/images/videoTrack1-r10.gif?raw=true)
+
+
+- [<b>videoTrack2.mp4</b> - A video recording of driving autonomously around track2](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/videoTrack2.mp4)
+
+    ![track2](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/images/videoTrack2-r10.gif?raw=true)
+
+  
+---
+
+#### 2. Submission includes functional code
+Using the Udacity provided simulator and my drive.py file, the car can be driven autonomously around the track by executing 
+```sh
+python drive.py model.h5
+```
+
+<b>IMPORTANT:</b> model.py must be present in same folder, because drive.py imports a hyperparameter for clahe transform
+
+#### 3. Submission code is usable and readable
+
+The model.py file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works.
+
+
+
+Model Architecture and Training Strategy
+---
+
+#### 1. An appropriate model architecture has been employed
+
+My model (model.py lines 321-360) is almost identical to the [Nvidia convolution neural network for self driving cars](https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/).
+
+The only changes I made are:
+
+- The input layer is for grayscale images (1 channel instead of 3).
+- After the input layer, the images are cropped.
+- After the cropping layer, the data is normalized.
+- In between the last convolutional layer and flatten layer, I inserted a dropout layer.
+
+A visualization of the Network Architecture is created, showing that there are 14 layers. For each layer, the input and output shapes are given. (model.py - line 369):
+
+![track2](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/images/model.gif?raw=true)
+
+- The input layer has 1 channel, expecting gray scale images of 160x320x1.
+- The 2nd layer crops the images in vertical direction, to eliminate the hood of the car and non-relevant sections above the road. The image size is reduced to 65x320x1.
+- The 3rd layer is a Lambda layer, normalizing the data.
+- Layers 4-8 are Convolution layers, to incrementally detect even more complex features in the images. 
+- Layer 9 is a Dropout layer, which was added to avoid over-fitting. It is shown below that without this layer, the model is prone to over-fitting, but that by adding just this layer results in a very nicely converging solution.
+- Layer 10 flattens the data.
+- Layer 11-14 are Densely connected layers (= activation(dot(input, kernel) + bias)), using relu activation.
+- Layer 14 is also the output layer, giving the predicted steering angle as output.
+
+
+
+#### 2. How I got it to work - grayscale, clahe, dropout, lots-of-data
+
+While developing the model I had some spectacular virtual crashes. I will explain how I got it to work by discussing this stubborn failure on track 2 that was the very last one to resolve:
+
+![track2](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/images/videoTrack2-crash.gif?raw=true) <b>Crash on a difficult section of Track 2</b> 
+
+
+This section is particularly challenging, because:
+
+- it contains a very bright section (sun) next to a very dark section (shadow)
+- the change occurs in the middle of a sharp turn
+
+The issue with the contrast is addressed by applying grayscale and clahe transforms  during image generation (model.py - generator - line 199), followed by a cropping layer in the keras model (model.py - line 337):
+
+![track2](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/images/track2-crash-image-processing.gif?raw=true)
+
+Up to this point in my model development, I had created training data sets for track 1 and track 2, driving the car in the center of the road, in both directions. This was a lot of data already, but still the car crashed. My observation was that the "autonomous driver" lost track of the center line and then did not know what to do. Reviewing the training data, I realized that this type of situation was not yet covered and the model was not trained how to respond.
+
+I created 4 additional training data sets. For track 1 & track 2, I drove while 'hugging the line'. I did this for the right line and the left line.
+Here I am showing the training data created for track2, hugging the left line:
+
+![track2](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/images/track2-hug-left-line.gif?raw=true) <b>Training data, using <i>'left line hugging'</i> drive style</b>
+
+
+I re-trained the model, and tried it out on both tracks. It perfectly handled track 1, but track 2 still crashed in the same location. I scratched my head a few times, and then few times more, trying to figure out how to fix this. I was sure I had sufficient data, convergence was good (see below), the model was a proven CNN, so what could it be ? I then decided to use a similar trick as what was done for the left and right camera images. 
+
+For all the images created during 'line hugging' drive style, I applied a small correction of 0.2 to the steering angle to nudge the car to move towards the center of the road. (model.py - HUG_CORRECTION). Note that for the left & right camera images, this correction comes on top of the already applied steering angle correction.
+
+I again re-trained the model, and now it successfully navigated both tracks, as shown in the videos at the beginning of this document.
+
+
+#### 3. Dropout layer to reduce overfitting in the model
+
+The model contains a dropout layer in order to reduce overfitting (model.py - line 353). This was necessary as can be seen from the convergence without and with the dropout layer:
+
+![dropout](https://github.com/ArjaanBuijk/CarND_Behavioral_Cloning_P3/blob/master/images/dropout-influence.gif?raw=true)
+
+#### 4. Model parameter tuning
+
+
+The model is a regression, using the mean squared error (mse) as the loss function. The minimization of mse is done with an adam optimizer, so the learning rate was not tuned manually (model.py - line 360).
+
+The model uses early stopping, via a keras callback (model.py - line 440).
+The ideal number of epochs was 7.
+
+The image pre-processing with CLAHE uses a clip limit of 0.5 (model.py - line 20). The model is not sensitive to the value of this parameter.
+
+The steering angle correction for left & right images is 0.2 (model.py - line 23)
+
+The additional steering angle correction for line-hugging data is 0.2 (model.py - line 38-42)
+
+#### 5. Modification to drive.py
+
+The image data generator applies grayscale and clahe. These are not part of the model saved in model.h5, so it was necessary to update drive.py, to apply the same operations for autonomous mode driving. (drive.py - line 74-75) 
+
+Training & Validation Strategy
+---
+
+#### 1. Training & Validation Data
+
+For reasons described above, I created 8 separate training data sets:
+
+| track | direction | location   | # lines |
+|-------| --------- | ---------- | ------- |
+|    1  |   left    |  center    |   4725  |
+|    1  |   right   |  center    |   3924  |
+|    1  |   left    |  hug-left  |   5230  |
+|    1  |   left    |  hug-right |   6430  |
+|    2  |   left    |  center    |   4855  |
+|    2  |   right   |  center    |   8179  |
+|    2  |   left    |  hug-left  |   7233  |
+|    2  |   left    |  hug-right |   6479  |
+|       |           |<b>TOTAL</b>|<b>47055</b>|
+
+After reading the lines from the log files, I shuffled them into random order. (model.py - line 59)
+
+Each "line" contains 3 images (center, left, right cameras).
+
+To create additional images, I also flipped each image horizontal.
+
+So, in total, there were <b>282,330</b> images.
+
+I split off 10% for validation, the rest was used for training. (model.py - line 416).
+
+A generator was used to efficiently process the images. It yields 32 images per batch.
+
+For debug purposes, I build an option into the generator to write the augmented images to disk. This is done by setting the argument save_to_dir. This concept was copied from the data generator that is build into Keras and it turned out to be critical to debug the model.
+
+---
 
 ### Dependencies
 This lab requires:
 
 * [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit)
 
-The lab enviroment can be created with CarND Term1 Starter Kit. Click [here](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) for the details.
-
-The following resources can be found in this github repository:
-* drive.py
-* video.py
-* writeup_template.md
-
-The simulator can be downloaded from the classroom. In the classroom, we have also provided sample data that you can optionally use to help train your model.
-
-## Details About Files In This Directory
-
-### `drive.py`
-
-Usage of `drive.py` requires you have saved the trained model as an h5 file, i.e. `model.h5`. See the [Keras documentation](https://keras.io/getting-started/faq/#how-can-i-save-a-keras-model) for how to create this file using the following command:
-```sh
-model.save(filepath)
-```
-
-Once the model has been saved, it can be used with drive.py using this command:
-
-```sh
-python drive.py model.h5
-```
-
-The above command will load the trained model and use the model to make predictions on individual images in real-time and send the predicted angle back to the server via a websocket connection.
-
-Note: There is known local system's setting issue with replacing "," with "." when using drive.py. When this happens it can make predicted steering values clipped to max/min values. If this occurs, a known fix for this is to add "export LANG=en_US.utf8" to the bashrc file.
 
 #### Saving a video of the autonomous agent
 
@@ -111,8 +215,3 @@ python video.py run1 --fps 48
 ```
 
 The video will run at 48 FPS. The default FPS is 60.
-
-#### Why create a video
-
-1. It's been noted the simulator might perform differently based on the hardware. So if your model drives succesfully on your machine it might not on another machine (your reviewer). Saving a video is a solid backup in case this happens.
-2. You could slightly alter the code in `drive.py` and/or `video.py` to create a video of what your model sees after the image is processed (may be helpful for debugging).
